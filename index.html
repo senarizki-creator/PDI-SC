@@ -84,10 +84,7 @@ th{font-size:12.5px;color:var(--mut);font-weight:600}
 
 @media(max-width:768px){.g2{grid-template-columns:1fr}nav{margin-left:0;width:100%;justify-content:space-between}header{gap:10px}}
 
-/* Selalu sembunyikan Menu Utama dan Sinkron di Halaman Antrian */
-#btnNavHome, .btn-sync {
-  display: none !important;
-}
+#btnNavHome, button[data-v='home'] { display: none !important; }
 </style></head><body>
 
 <div id="toast" class="toast hide"></div>
@@ -100,11 +97,13 @@ th{font-size:12.5px;color:var(--mut);font-weight:600}
     </div>
   </h1>
   <nav id="nav">
-    <button data-v="antrian" id="btnNavAntrian" class="on" style="background:var(--red);color:#fff">🎫 Ambil Antrian</button>
-    <button data-v="book" id="btnNavBook" onclick="location.href='booking.html'">📅 Booking Service</button>
+    <button data-v="antrian" id="btnNavAntrian">🎫 Ambil Antrian</button>
+    <button data-v="book" id="btnNavBook">📅 Booking Service</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
-    
+    <button type="button" class="btn-sync" onclick="pull(true)" title="Klik untuk sinkronisasi data sekarang">
+      <span id="syncIcon">🔄</span> <span id="syncLabel">Sinkron</span>
+    </button>
     <span class="clk" id="clk"></span>
   </div>
 </header>
@@ -296,10 +295,10 @@ function getFormObj(containerId) {
 }
 
 /* Daftar Site dinamis (dimuat otomatis dari Sheet 'SITE') */
-let sites = ld("sq_sites", []);
+let sites = ld("sq_sites", ["CDG", "DPK", "SBY"]);
 let sitePins = ld("sq_site_pins", {});
 let siteStalls = ld("sq_site_stalls", {});
-let activeSite = ld("sq_active_site", sites[0] || "");
+let activeSite = ld("sq_active_site", (sites && sites[0]) ? sites[0] : "CDG");
 
 let recs = ld("sq_recs", []);
 let cfg = Object.assign({ stalls: 2, quota: 6, perDate: {}, url: SCRIPT_URL, siteQuotas: {} }, ld("sq_cfg", {}));
@@ -309,7 +308,7 @@ if (cfg.url !== SCRIPT_URL) {
 }
 const urlParams = new URLSearchParams(window.location.search);
 const pView = urlParams.get("v") || urlParams.get("view");
-let view = (pView === "book" || pView === "home") ? pView : "antrian";
+let view = (pView === "antrian" || pView === "home") ? pView : "book";
 let role = ld("sq_role", {}), saDate = today(), admDate = today(), done = null, doneAntrian = null;
 
 function switchView(v) {
@@ -689,10 +688,25 @@ function applyServerData(j) {
     sites = j.sites;
     sv("sq_sites", sites);
     if (!activeSite || !sites.map(s => s.toUpperCase()).includes(activeSite.toUpperCase())) {
-      activeSite = (j.site || sites[0] || "").toUpperCase();
+      activeSite = (j.site || sites[0] || "CDG").toUpperCase();
       sv("sq_active_site", activeSite);
     }
     updateSiteBadges();
+
+    const sAntrian = $("#antrianSiteSel");
+    if (sAntrian) {
+      const cur = sAntrian.value || activeSite;
+      sAntrian.innerHTML = sites.map(s => `<option value="${s}" ${s.toUpperCase() === cur.toUpperCase() ? "selected" : ""}>Cabang ${s}</option>`).join("");
+    }
+    const sBook = $("#bookSiteSel");
+    if (sBook) {
+      const cur = sBook.value || activeSite;
+      sBook.innerHTML = sites.map(s => `<option value="${s}" ${s.toUpperCase() === cur.toUpperCase() ? "selected" : ""}>Cabang ${s}</option>`).join("");
+    }
+    const tagA = $("#antrianSiteTag");
+    if (tagA) tagA.textContent = activeSite;
+    const tagB = $("#bookSiteTag");
+    if (tagB) tagB.textContent = activeSite;
   }
 
   // Memuat password Service Advisor per cabang
@@ -888,7 +902,10 @@ function nextNo(d, s = activeSite) {
 }
 
 function create(f, d, src, forceIgnoreQuota = false) {
-  let allocatedStall = "";
+    const selectedSite = (f.site && f.site.value) ? f.site.value.toUpperCase() : activeSite;
+  activeSite = selectedSite;
+  sv("sq_active_site", activeSite);
+let allocatedStall = "";
   let bookingTime = "";
 
   if (src === "Booking") {
@@ -1178,6 +1195,32 @@ function confirmSwitchSite() {
     }
   }
   closeSiteModal();
+}
+
+function switchSiteFromForm(newSite) {
+  if (!newSite) return;
+  const s = newSite.toUpperCase();
+  activeSite = s;
+  sv("sq_active_site", activeSite);
+  updateSiteBadges();
+
+  const tagA = $("#antrianSiteTag");
+  if (tagA) tagA.textContent = activeSite;
+  const tagB = $("#bookSiteTag");
+  if (tagB) tagB.textContent = activeSite;
+
+  const fa = $("#fa");
+  if (fa) {
+    const fObj = getFormObj(fa);
+    if (fObj.tgl) antrianSlotInfo(fObj.tgl.value);
+  }
+  const fb = $("#fb");
+  if (fb) {
+    const fObj = getFormObj(fb);
+    if (fObj.tgl) slotInfo(fObj.tgl.value);
+  }
+
+  pull();
 }
 
 function updateSiteBadges() {
@@ -1478,10 +1521,13 @@ function vAntrian() {
   }
   const t = today();
   return `
+    <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <button type="button" class="btn sm" style="border-radius:4px;background:var(--pri)" onclick="switchView('book')">Beralih ke Booking Service →</button>
+    </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <h2>Form Ambil Antrian Service</h2>
-        <div class="tag s-Hadir">Lokasi: <b>${esc(activeSite || "Belum dipilih")}</b></div>
+        <div class="tag s-Hadir" onclick="openSiteModal()" style="cursor:pointer" title="Klik untuk mengganti cabang">Cabang: <b id="antrianSiteTag">${esc(activeSite || "CDG")}</b> &#9662;</div>
       </div>
       <div id="fa">
         <div class="g2">
@@ -1592,13 +1638,12 @@ function vBook() {
   const t = tomorrow();
   return `
     <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <button type="button" class="btn sec sm" style="border-radius:4px" onclick="switchView('home')">← Kembali ke Menu Utama</button>
       <button type="button" class="btn sm" style="border-radius:4px;background:var(--red)" onclick="switchView('antrian')">Beralih ke Ambil Antrian →</button>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <h2>Form Booking Service</h2>
-        <div class="tag s-Hadir">Lokasi: <b>${esc(activeSite || "Belum dipilih")}</b></div>
+        <div class="tag s-Hadir" onclick="openSiteModal()" style="cursor:pointer" title="Klik untuk mengganti cabang">Cabang: <b id="bookSiteTag">${esc(activeSite || "CDG")}</b> &#9662;</div>
       </div>
       <div style="font-size:13px;color:var(--mut);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-left:3px solid var(--pri);border-radius:4px">
         ℹ️ <b>Ketentuan Booking:</b> Booking service hanya dapat dilakukan mulai <b>H-1 (besok ke atas)</b>. Untuk servis pada hari ini (${fmtD(today())}), silakan langsung gunakan menu <b>Ambil Antrian</b>.
@@ -2151,14 +2196,6 @@ function render() {
   const btnLogout = $("#btnLogout");
   if (btnLogout) btnLogout.classList.toggle("hide", !isAuth);
   document.body.className = "view-" + view;
-
-  // Khusus di menu antrian, sembunyikan tombol sinkron dan menu utama
-  const isAntrian = (view === "antrian");
-  const syncBtn = document.querySelector(".btn-sync");
-  if (syncBtn) syncBtn.style.setProperty("display", isAntrian ? "none" : "", "important");
-
-  const btnNavHome = document.querySelector("#btnNavHome");
-  if (btnNavHome) btnNavHome.style.setProperty("display", isAntrian ? "none" : "", "important");
 
   const fa = $("#fa");
   if (fa) {
