@@ -84,7 +84,10 @@ th{font-size:12.5px;color:var(--mut);font-weight:600}
 
 @media(max-width:768px){.g2{grid-template-columns:1fr}nav{margin-left:0;width:100%;justify-content:space-between}header{gap:10px}}
 
-#btnNavHome, button[data-v='home'] { display: none !important; }
+/* Selalu sembunyikan Menu Utama dan Sinkron di Halaman Antrian */
+#btnNavHome, .btn-sync {
+  display: none !important;
+}
 </style></head><body>
 
 <div id="toast" class="toast hide"></div>
@@ -97,13 +100,11 @@ th{font-size:12.5px;color:var(--mut);font-weight:600}
     </div>
   </h1>
   <nav id="nav">
-    <button data-v="antrian" id="btnNavAntrian">🎫 Ambil Antrian</button>
-    <button data-v="book" id="btnNavBook">📅 Booking Service</button>
+    <button data-v="antrian" id="btnNavAntrian" class="on" style="background:var(--red);color:#fff">🎫 Ambil Antrian</button>
+    <button data-v="book" id="btnNavBook" onclick="location.href='booking.html'">📅 Booking Service</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
-    <button type="button" class="btn-sync" onclick="pull(true)" title="Klik untuk sinkronisasi data sekarang">
-      <span id="syncIcon">🔄</span> <span id="syncLabel">Sinkron</span>
-    </button>
+    
     <span class="clk" id="clk"></span>
   </div>
 </header>
@@ -294,11 +295,13 @@ function getFormObj(containerId) {
   return res;
 }
 
-/* Daftar Site dinamis (dimuat otomatis dari Sheet 'SITE') */
-let sites = ld("sq_sites", ["CDG", "DPK", "SBY"]);
+/* Daftar Site (Paten JSL) */
+const DEFAULT_SITE = "JSL";
+let sites = ["JSL"];
 let sitePins = ld("sq_site_pins", {});
 let siteStalls = ld("sq_site_stalls", {});
-let activeSite = ld("sq_active_site", (sites && sites[0]) ? sites[0] : "CDG");
+let activeSite = "JSL";
+sv("sq_active_site", "JSL");
 
 let recs = ld("sq_recs", []);
 let cfg = Object.assign({ stalls: 2, quota: 6, perDate: {}, url: SCRIPT_URL, siteQuotas: {} }, ld("sq_cfg", {}));
@@ -308,7 +311,7 @@ if (cfg.url !== SCRIPT_URL) {
 }
 const urlParams = new URLSearchParams(window.location.search);
 const pView = urlParams.get("v") || urlParams.get("view");
-let view = (pView === "antrian" || pView === "home") ? pView : "book";
+let view = (pView === "book") ? "book" : "antrian";
 let role = ld("sq_role", {}), saDate = today(), admDate = today(), done = null, doneAntrian = null;
 
 function switchView(v) {
@@ -687,10 +690,8 @@ function applyServerData(j) {
   if (j.sites && Array.isArray(j.sites) && j.sites.length > 0) {
     sites = j.sites;
     sv("sq_sites", sites);
-    if (!activeSite || !sites.map(s => s.toUpperCase()).includes(activeSite.toUpperCase())) {
-      activeSite = (j.site || sites[0] || "CDG").toUpperCase();
-      sv("sq_active_site", activeSite);
-    }
+    activeSite = "JSL";
+    sv("sq_active_site", "JSL");
     updateSiteBadges();
 
     const sAntrian = $("#antrianSiteSel");
@@ -1030,9 +1031,9 @@ function openLoginModal(k) {
   const curSite = (activeSite || (sites[0] || "")).toUpperCase();
 
   if (k === "sa") {
-    if (title) title.textContent = "Login Service Advisor - " + (curSite || "Pilih Cabang");
-    if (desc) desc.textContent = "Masukkan password cabang " + (curSite || "") + ":";
-    if (lblSite) lblSite.style.display = "block";
+    if (title) title.textContent = "Login Service Advisor - JSL";
+    if (desc) desc.textContent = "Masukkan password cabang JSL:";
+    if (lblSite) lblSite.style.display = "none";
   } else {
     if (title) title.textContent = "Login Administrator";
     if (desc) desc.textContent = "Masukkan PIN Administrator:";
@@ -1101,7 +1102,8 @@ function submitLogin() {
 
   const targetRole = pendingRoleTarget;
   const p = pinEl.value.trim();
-  const selectedSite = (siteEl && siteEl.value ? siteEl.value : activeSite).toUpperCase();
+  const selectedSite = "JSL";
+  activeSite = "JSL";
 
   let expectedPin = "";
   if (targetRole === "sa") {
@@ -1224,8 +1226,13 @@ function switchSiteFromForm(newSite) {
 }
 
 function updateSiteBadges() {
+  activeSite = "JSL";
   const txt = $("#siteBadgeTxt");
-  if (txt) txt.textContent = activeSite || "Pilih Cabang";
+  if (txt) txt.textContent = "JSL";
+  const tagA = $("#antrianSiteTag");
+  if (tagA) tagA.textContent = "JSL";
+  const tagB = $("#bookSiteTag");
+  if (tagB) tagB.textContent = "JSL";
 }
 
 /* ===== MODAL KONFIRMASI BOOKING ===== */
@@ -1521,13 +1528,10 @@ function vAntrian() {
   }
   const t = today();
   return `
-    <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <button type="button" class="btn sm" style="border-radius:4px;background:var(--pri)" onclick="switchView('book')">Beralih ke Booking Service →</button>
-    </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <h2>Form Ambil Antrian Service</h2>
-        <div class="tag s-Hadir" onclick="openSiteModal()" style="cursor:pointer" title="Klik untuk mengganti cabang">Cabang: <b id="antrianSiteTag">${esc(activeSite || "CDG")}</b> &#9662;</div>
+        <div class="tag s-Hadir" style="cursor:default;" title="Cabang Bengkel: JSL (Paten)">Cabang: <b id="antrianSiteTag">JSL</b></div>
       </div>
       <div id="fa">
         <div class="g2">
@@ -1643,7 +1647,7 @@ function vBook() {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <h2>Form Booking Service</h2>
-        <div class="tag s-Hadir" onclick="openSiteModal()" style="cursor:pointer" title="Klik untuk mengganti cabang">Cabang: <b id="bookSiteTag">${esc(activeSite || "CDG")}</b> &#9662;</div>
+        <div class="tag s-Hadir" style="cursor:default;" title="Cabang Bengkel: JSL (Paten)">Cabang: <b id="bookSiteTag">JSL</b></div>
       </div>
       <div style="font-size:13px;color:var(--mut);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-left:3px solid var(--pri);border-radius:4px">
         ℹ️ <b>Ketentuan Booking:</b> Booking service hanya dapat dilakukan mulai <b>H-1 (besok ke atas)</b>. Untuk servis pada hari ini (${fmtD(today())}), silakan langsung gunakan menu <b>Ambil Antrian</b>.
@@ -2196,6 +2200,14 @@ function render() {
   const btnLogout = $("#btnLogout");
   if (btnLogout) btnLogout.classList.toggle("hide", !isAuth);
   document.body.className = "view-" + view;
+
+  // Khusus di menu antrian, sembunyikan tombol sinkron dan menu utama
+  const isAntrian = (view === "antrian");
+  const syncBtn = document.querySelector(".btn-sync");
+  if (syncBtn) syncBtn.style.setProperty("display", isAntrian ? "none" : "", "important");
+
+  const btnNavHome = document.querySelector("#btnNavHome");
+  if (btnNavHome) btnNavHome.style.setProperty("display", isAntrian ? "none" : "", "important");
 
   const fa = $("#fa");
   if (fa) {
