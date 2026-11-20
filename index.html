@@ -95,9 +95,7 @@ th{font-size:12.5px;color:var(--mut);font-weight:600}
 <header>
   <h1>
     <span>Antrian Motor Listrik</span>
-    <div class="site-badge" onclick="openSiteModal()" title="Klik untuk mengganti cabang/site aktif">
-      Cabang: <b id="siteBadgeTxt">-</b> ▾
-    </div>
+    <div class="site-badge" style="cursor:default;" title="Cabang Bengkel: JSL (Paten)">Cabang: <b id="siteBadgeTxt">JSL</b></div>
   </h1>
   <nav id="nav">
     <button data-v="antrian" id="btnNavAntrian" class="on" style="background:var(--red);color:#fff">🎫 Ambil Antrian</button>
@@ -131,7 +129,7 @@ th{font-size:12.5px;color:var(--mut);font-weight:600}
 </div>
 
 <!-- MODAL SWITCH SITE -->
-<div id="modalSite" class="modal-overlay hide">
+<div id="modalSite" class="modal-overlay hide" style="display:none !important;">
   <div class="modal-card">
     <h3>Pilih Site / Cabang Aktif</h3>
     <p class="note">Pilih lokasi cabang untuk melihat antrian dan kuota servis:</p>
@@ -1158,12 +1156,7 @@ function logoutRole() {
 }
 
 function openSiteModal() {
-  const sel = $("#switchSiteSel");
-  if (sel) {
-    sel.innerHTML = sites.map(s => `<option value="${s}" ${s.toUpperCase() === activeSite.toUpperCase() ? "selected" : ""}>${s}</option>`).join("") || '<option value="">(Belum ada cabang)</option>';
-  }
-  const modal = $("#modalSite");
-  if (modal) modal.classList.remove("hide");
+  // Cabang telah dipatenkan ke JSL
 }
 
 function closeSiteModal() {
@@ -1270,7 +1263,7 @@ function openConfirmBookingModal(f) {
   if (bodyEl) {
     bodyEl.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13.5px">
-        <tr><td style="color:var(--muted);width:38%;padding:3px 0">Cabang:</td><td style="font-weight:700">${esc(activeSite || "-")}</td></tr>
+        <tr><td style="color:var(--muted);width:38%;padding:3px 0">Cabang:</td><td style="font-weight:700">JSL</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Tanggal:</td><td style="font-weight:700;color:var(--pri)">${fmtD(d)}</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Jam Booking:</td><td style="font-weight:700;color:var(--pri)">${esc(slot)} - ${addMinutes(slot, 60)} WIB</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Nama Pemilik:</td><td style="font-weight:700">${esc(nama)}</td></tr>
@@ -1325,7 +1318,7 @@ function openConfirmAntrianModal(f) {
   if (bodyEl) {
     bodyEl.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13.5px">
-        <tr><td style="color:var(--muted);width:38%;padding:3px 0">Cabang:</td><td style="font-weight:700">${esc(activeSite || "-")}</td></tr>
+        <tr><td style="color:var(--muted);width:38%;padding:3px 0">Cabang:</td><td style="font-weight:700">JSL</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Tanggal:</td><td style="font-weight:700;color:var(--pri)">${fmtD(d)}</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Waktu Antri:</td><td style="font-weight:700;color:var(--pri)">${hm(now())} WIB</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Nama Pemilik:</td><td style="font-weight:700">${esc(nama)}</td></tr>
@@ -1422,7 +1415,7 @@ function vHome() {
   return `
     <div style="text-align:center;margin:12px 0 24px">
       <div style="display:inline-block;padding:6px 14px;background:var(--card);border:1px solid var(--line);border-radius:20px;font-size:13px;font-weight:600;color:var(--mut);margin-bottom:12px">
-        📍 Cabang Aktif: <b style="color:var(--ink)">${esc(activeSite || "Belum Dipilih")}</b>
+        📍 Cabang Aktif: <b style="color:var(--ink)">JSL</b>
       </div>
       <h2 style="font-size:26px;margin:0 0 8px;font-weight:700">Layanan Servis Motor Listrik</h2>
       <p class="note" style="font-size:14px;max-width:560px;margin:0 auto">
@@ -1782,12 +1775,7 @@ function vSA() {
         <h2 style="margin:0">Service Advisor &middot; Cabang <span style="color:var(--red)">${esc(activeSite)}</span></h2>
         <span class="note">Kelola antrian khusus cabang ini</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="note" style="font-weight:600">Pindah Cabang:</span>
-        <select style="width:auto;margin:0;padding:6px 12px;font-weight:700" onchange="switchSiteFromView(this.value)">
-          ${sites.map(s => `<option value="${s}" ${s.toUpperCase() === activeSite.toUpperCase() ? "selected" : ""}>${s}</option>`).join("")}
-        </select>
-      </div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="tag s-Hadir" style="font-size:13px;padding:4px 10px;">Cabang: <b>JSL</b> (Paten)</span></div>
     </div>
 
     <div class="card">
@@ -1828,7 +1816,7 @@ function vSA() {
                 <span style="display:inline-block;width:10px;height:10px;background:#D93025;border-radius:50%"></span>
                 <div>
                   <b style="color:#C5221F">${st}: Terisi (Create SCL)</b><br>
-                  <span class="note" style="color:#666">${busy.no_antrian} &middot; ${esc(busy.nama)} (${esc(busy.plat)})</span>
+                  <span class="note" style="color:#666">${busy.no_antrian} &middot; ${esc(busy.nama)} (${esc(busy.plat)})${busy.hp ? ` &middot; ${esc(busy.hp)}` : ""}</span>
                 </div>
               </div>`;
           } else {
@@ -1864,7 +1852,11 @@ function vSA() {
           return `
           <tr>
             <td class="no">${r.no_antrian}</td>
-            <td><b>${esc(r.nama)}</b><br><span class="note">${esc(r.plat)} &middot; ${esc(r.model)}</span></td>
+            <td>
+              <b>${esc(r.nama)}</b>
+              ${r.hp ? `<br><span style="font-size:12.5px;font-weight:600;color:var(--ink)">${esc(r.hp)}</span>` : ""}
+              <br><span class="note">${esc(r.plat)} &middot; ${esc(r.model)}</span>
+            </td>
             <td style="white-space:nowrap">${jamDisplay}</td>
             <td>${esc(r.layanan)}</td>
             <td><span class="tag ${statusClass(r.status)}">${statusLabel(r.status)}</span>${r.stall ? `<br><span class="note"><b>${r.stall}</b></span>` : ""}</td>
@@ -1998,7 +1990,11 @@ function vAdm() {
           return `
           <tr>
             <td class="no">${r.no_antrian}</td>
-            <td><b>${esc(r.nama)}</b><br><span class="note">${esc(r.plat)}</span></td>
+            <td>
+              <b>${esc(r.nama)}</b>
+              ${r.hp ? `<br><span style="font-size:11.5px;font-weight:600;color:var(--ink)">${esc(r.hp)}</span>` : ""}
+              <br><span class="note">${esc(r.plat)}</span>
+            </td>
             <td style="white-space:nowrap">${jamDisplay}</td>
             <td>${hm(r.checkin)}</td><td>${hm(r.mulai)}</td><td>${hm(r.selesai)}</td>
             <td>${r.sumber === "Booking" || r.status === "Batal" ? '<span class="note" style="color:#888">- (Booking)</span>' : lv(r.checkin, r.mulai)}</td>
@@ -2104,7 +2100,7 @@ function openConfirmStallsModal() {
 
     bodyEl.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13.5px">
-        <tr><td style="color:var(--muted);width:42%;padding:3px 0">Cabang:</td><td style="font-weight:700">${esc(activeSite || "-")}</td></tr>
+        <tr><td style="color:var(--muted);width:42%;padding:3px 0">Cabang:</td><td style="font-weight:700">JSL</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Jumlah Stall Standar:</td><td style="font-weight:700;color:var(--pri)">${sDefault} Stall</td></tr>
         <tr><td style="color:var(--muted);padding:3px 0">Kapasitas Harian:</td><td><b>${sDefault * 3}</b> Booking + <b>${sDefault * 3}</b> Walk-in<br><span style="font-size:12px;color:var(--ok);font-weight:700">Total ${sDefault * 6} Unit/Hari</span></td></tr>
         ${specialInfo}
